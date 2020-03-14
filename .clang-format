@@ -1,0 +1,35 @@
+﻿---
+AlignAfterOpenBracket: Align
+AlwaysBreakAfterReturnType: None
+AlwaysBreakTemplateDeclarations: 'Yes'
+BinPackArguments: 'false'
+BinPackParameters: 'false'
+BreakBeforeBraces: Custom
+BraceWrapping:
+    AfterStruct: true
+    AfterClass: true
+    AfterCaseLabel: true
+    AfterFunction: true
+    AfterControlStatement: true
+    BeforeCatch: true
+    BeforeElse: true
+    SplitEmptyFunction: true
+AllowAllConstructorInitializersOnNextLine: false
+AllowAllParametersOfDeclarationOnNextLine: false
+AllowAllArgumentsOnNextLine: false
+BinPackArguments: false
+BinPackParameters: false
+BreakConstructorInitializers: BeforeComma
+ColumnLimit: '110'
+ConstructorInitializerIndentWidth: '2'
+Cpp11BracedListStyle: 'false'
+Language: Cpp
+PointerAlignment: Left
+SpaceAfterTemplateKeyword: 'false'
+SpacesInAngles: 'true'
+SpacesInContainerLiterals: 'true'
+SpacesInParentheses: 'true'
+SpacesInSquareBrackets: 'true'
+UseTab: Never
+
+...
