@@ -15,6 +15,9 @@
 -- Maybe just `ycm`? or `client` as in a client for `ycmd`?
 local M = {}
 
+-- XXX(andrea): find out if there is a better way in lua.
+local plugin_directory = vim.fn.fnamemodify(vim.fn.resolve(vim.fn.expand('<sfile>:p')), ':h:h')
+
 local complete_id = 0
 local startcol = 0
 local remote_job_id = nil
@@ -104,12 +107,28 @@ local function log(msg)
   vim.api.nvim_out_write(msg .. "\n")
 end
 
-function M.init(jobid)
+local function init(jobid)
   remote_job_id = jobid
 
   -- We might be loaded lazily so we have to try to process the buffer we're in
   -- the same way we process buffer on FileType set.
   M.refresh_identifiers()
+end
+
+function M.start_ycm()
+  local bin = plugin_directory .. "/build/ycm"
+  if not vim.fn.executable(bin) then
+    log "The ycm binary is not available. ycm.nvim cannot function without it"
+    return
+  end
+
+  remote_job_id = vim.fn.jobstart( bin, { rpc = true, on_exit = M.on_exit } )
+  if remote_job_id <= 0 then
+    log "Failed to spawn ycm plugin"
+    return
+  end
+
+  init(remote_job_id)
 end
 
 function M.on_exit(...)
@@ -195,6 +214,7 @@ local function check_requirement_for_buffer()
   if nvim_b_get(bufnr, 'ycm_nvim_no_parser') == 1 then
     return false
   end
+
   -- XXX(andrea): the query should be for each filetype with some sane default
   -- for each but configurable by the user.
   local query = [[
