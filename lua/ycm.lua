@@ -11,7 +11,8 @@
 -- See the License for the specific language governing permissions and
 --    limitations under the License.
 
-local autocmd = require('ycm.autocmd')
+local parsers = require'nvim-treesitter.parsers'
+local autocmd = require'ycm.autocmd'
 
 -- XXX(andrea): find out if there is a better way in lua.
 local plugin_directory = vim.fn.fnamemodify(vim.fn.resolve(vim.fn.expand('<sfile>:p')), ':h:h')
@@ -31,7 +32,6 @@ local function nil_wrap(fn, ...)
   return pcall_ret(pcall(fn, ...))
 end
 
--- XXX(andrea): should this be `Buffer:new`?
 local Buffer = {}
 
 function Buffer:new(bufnr, ft, query)
@@ -39,13 +39,16 @@ function Buffer:new(bufnr, ft, query)
   return setmetatable({
     bufnr = bufnr,
     ft = ft,
-    parser = nil_wrap(vim.treesitter.get_parser, bufnr, ft),
+    -- XXX(andrea): once we start integrating more with nvim-treesitter we
+    -- should probably pass the lang directly
+    parser = parsers.get_parser(bufnr, parsers.ft_to_lang(ft)),
     query = nil_wrap(vim.treesitter.parse_query, ft, query),
     tick = vim.api.nvim_buf_get_changedtick(bufnr)
   }, Buffer)
 end
 
 -- XXX(andrea): is `parse` a good name?
+-- XXX(andrea): if we set we up as nvim-treesitter module do we have to call `parse` on our own?
 function Buffer:parse()
   self.tick = vim.api.nvim_buf_get_changedtick(self.bufnr)
   return self.parser:parse()
@@ -185,10 +188,15 @@ local function check_requirement_for_buffer()
     (namespace_identifier) @namespace_identifier
   ]]
 
-  local buffer = Buffer:new(bufnr, ft, query)
-  if buffer.parser == nil or buffer.query == nil then
+  if not parsers.has_parser() then
     vim.api.nvim_buf_set_var(bufnr, 'ycm_nvim_no_parser', 1)
-    return false, "ycm.nvim is disabled in this buffer; a suitable tree-sitter parser or identifier query is not available."
+    return false, "ycm.nvim is disabled in this buffer; a suitable tree-sitter parser is not available."
+  end
+
+  local buffer = Buffer:new(bufnr, ft, query)
+  if buffer.query == nil then
+    vim.api.nvim_buf_set_var(bufnr, 'ycm_nvim_no_parser', 1)
+    return false, "ycm.nvim is disabled in this buffer; a suitable tree-sitter query is not available."
   end
   buffers[ bufnr ] = buffer
 
