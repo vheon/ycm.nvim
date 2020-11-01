@@ -21,8 +21,6 @@ local startcol = 0
 local remote_job_id = nil
 
 local buffers = {}
-local Buffer = {}
-Buffer.__index = Buffer
 
 -- stolen from the vim module
 local function pcall_ret(status, ...)
@@ -34,20 +32,17 @@ local function nil_wrap(fn, ...)
 end
 
 -- XXX(andrea): should this be `Buffer:new`?
-local function create_buffer(bufnr, ft, query)
-  local self = setmetatable({}, Buffer)
-  self.bufnr = bufnr
-  self.ft = ft
-  self.parser = nil_wrap(vim.treesitter.get_parser, bufnr, ft)
-  if self.parser == nil then
-    return nil
-  end
-  self.query = nil_wrap(vim.treesitter.parse_query, ft, query)
-  if self.query == nil then
-    return nil
-  end
-  self.tick = vim.api.nvim_buf_get_changedtick(bufnr)
-  return self
+local Buffer = {}
+
+function Buffer:new(bufnr, ft, query)
+  self.__index = self
+  return setmetatable({
+    bufnr = bufnr,
+    ft = ft,
+    parser = nil_wrap(vim.treesitter.get_parser, bufnr, ft),
+    query = nil_wrap(vim.treesitter.parse_query, ft, query),
+    tick = vim.api.nvim_buf_get_changedtick(bufnr)
+  }, Buffer)
 end
 
 -- XXX(andrea): is `parse` a good name?
@@ -189,8 +184,9 @@ local function check_requirement_for_buffer()
     (field_identifier) @field_identifier
     (namespace_identifier) @namespace_identifier
   ]]
-  local buffer = create_buffer(bufnr, ft, query)
-  if not buffer then
+
+  local buffer = Buffer:new(bufnr, ft, query)
+  if buffer.parser == nil or buffer.query == nil then
     vim.api.nvim_buf_set_var(bufnr, 'ycm_nvim_no_parser', 1)
     return false, "ycm.nvim is disabled in this buffer; a suitable tree-sitter parser or identifier query is not available."
   end
