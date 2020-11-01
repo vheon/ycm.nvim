@@ -109,65 +109,6 @@ local function log(msg)
   vim.api.nvim_out_write(msg .. "\n")
 end
 
-local function init(jobid)
-  remote_job_id = jobid
-
-  -- We might be loaded lazily so we have to try to process the buffer we're in
-  -- the same way we process buffer on FileType set.
-  M.refresh_identifiers()
-end
-
-function M.start_ycm()
-  local bin = plugin_directory .. "/build/ycm"
-  if not vim.fn.executable(bin) then
-    log "The ycm binary is not available. ycm.nvim cannot function without it"
-    return
-  end
-
-  remote_job_id = vim.fn.jobstart( bin, { rpc = true, on_exit = M.on_exit } )
-  if remote_job_id <= 0 then
-    log "Failed to spawn ycm plugin"
-    return
-  end
-
-  init(remote_job_id)
-end
-
-function M.on_exit(...)
-  remote_job_id = nil
-  -- XXX(andrea): we should:
-  -- * remove all autocommands.
-  -- * provide a command to setup the plugin again.
-end
-
-local function setup_autocmds()
-  -- XXX(andrea): once we verify that this is working we can loose the `M` prefix for all of them
-  autocmd.define_augroup('ycm', true)
-  -- XXX(andrea): the FileType event should also handle the case where a
-  -- buffer change Filetype after it is loaded.
-  autocmd.define_autocmd({'FileType'}, '*', {on_event = M.initialize_buffer}, {group='ycm'})
-  -- autocmd.define_autocmd({'FileType'}, '*', M.refresh_identifiers)
-
-  -- XXX(andrea): all the autocmd that follow should actually be for <buffer>
-  -- that has been validated and are compatible. Otherwise we are firing lua
-  -- function only to do checks we already know failed and exit.
-  autocmd.define_autocmd({'BufUnload'}, '*', {on_event = M.on_buf_unload}, {abuf = true, group='ycm'})
-
-  autocmd.define_autocmd({'TextChanged'}, '*', {on_event = M.refresh_identifiers}, {group = 'ycm'})
-  autocmd.define_autocmd({'InsertLeave'}, '*', {on_event = M.refresh_identifiers_if_needed}, {group = 'ycm'})
-
-  autocmd.define_autocmd({'TextChangedI'}, '*', {on_event = M.complete}, {group = 'ycm'})
-  autocmd.define_autocmd({'TextChangedP'}, '*', {on_event = M.complete_p}, {group = 'ycm'})
-end
-
-function M.setup()
-  vim.o.completeopt = "menuone,noinsert,noselect"
-  vim.cmd[[set shortmess+=c]]
-
-  setup_autocmds()
-  M.start_ycm()
-end
-
 local function collect_and_send_refresh_identifiers()
   local bufnr = vim.api.nvim_get_current_buf()
   local buffer = buffers[bufnr]
@@ -270,7 +211,14 @@ local function allowed_in_buffer()
   return allowed
 end
 
-function M.initialize_buffer()
+local function refresh_identifiers()
+  if not allowed_in_buffer() then
+    return
+  end
+  collect_and_send_refresh_identifiers()
+end
+
+local function initialize_buffer()
   local bufnr = vim.api.nvim_get_current_buf()
   local buffer = buffers[bufnr]
 
@@ -279,17 +227,10 @@ function M.initialize_buffer()
     buffers[bufnr] = nil
   end
 
-  M.refresh_identifiers()
+  refresh_identifiers()
 end
 
-function M.refresh_identifiers()
-  if not allowed_in_buffer() then
-    return
-  end
-  collect_and_send_refresh_identifiers()
-end
-
-function M.refresh_identifiers_if_needed()
+function refresh_identifiers_if_needed()
   if not allowed_in_buffer() then
     return
   end
@@ -307,8 +248,9 @@ end
 -- XXX(andrea): right now ycmd is not able to handle unload of buffers for the
 -- identifier completer (which is what we use). Adding it would require adding
 -- the functionality to ycmd first. See if it is worth it and useful.
-function M.on_buf_unload(bufnr)
+local function on_buf_unload(bufnr)
   -- XXX(andrea): check if this is enough
+  log( "on_buf_unload "..bufnr)
   buffers[bufnr] = nil
   -- XXX(andrea): TODO
   -- vim.rpcnotify(remote_job_id, "unload", ft, query )
@@ -319,7 +261,7 @@ local function get_position()
   return cursor[1] - 1, cursor[2]
 end
 
-function M.complete()
+local function complete()
   if not allowed_in_buffer() then
     return
   end
@@ -347,7 +289,7 @@ function M.complete()
   end
 end
 
-function M.complete_p()
+local function complete_p()
   if not allowed_in_buffer() then
     return
   end
@@ -364,7 +306,7 @@ function M.complete_p()
     return
   end
 
-  M.complete()
+  complete()
 end
 
 
@@ -474,5 +416,65 @@ function M.disable_ts_debug_layer()
   nvim_clear_augroup("ycmtsdebug")
   vim.api.nvim_buf_clear_namespace(0, debughl_ns, 0, -1)
 end
+
+local function setup_autocmds()
+  autocmd.define_augroup('ycm', true)
+  -- XXX(andrea): the FileType event should also handle the case where a
+  -- buffer change Filetype after it is loaded.
+  autocmd.define_autocmd({'FileType'}, '*', {on_event = initialize_buffer}, {group='ycm'})
+  -- autocmd.define_autocmd({'FileType'}, '*', refresh_identifiers)
+
+  -- XXX(andrea): all the autocmd that follow should actually be for <buffer>
+  -- that has been validated and are compatible. Otherwise we are firing lua
+  -- function only to do checks we already know failed and exit.
+  autocmd.define_autocmd({'BufUnload'}, '*', {on_event = on_buf_unload}, {abuf = true, group='ycm'})
+
+  autocmd.define_autocmd({'TextChanged'}, '*', {on_event = refresh_identifiers}, {group = 'ycm'})
+  autocmd.define_autocmd({'InsertLeave'}, '*', {on_event = refresh_identifiers_if_needed}, {group = 'ycm'})
+
+  autocmd.define_autocmd({'TextChangedI'}, '*', {on_event = complete}, {group = 'ycm'})
+  autocmd.define_autocmd({'TextChangedP'}, '*', {on_event = complete_p}, {group = 'ycm'})
+end
+
+local function init(jobid)
+  remote_job_id = jobid
+
+  -- We might be loaded lazily so we have to try to process the buffer we're in
+  -- the same way we process buffer on FileType set.
+  refresh_identifiers()
+end
+
+local function on_exit(...)
+  remote_job_id = nil
+  -- XXX(andrea): we should:
+  -- * remove all autocommands.
+  -- * provide a command to setup the plugin again.
+end
+
+local function start_ycm()
+  local bin = plugin_directory .. "/build/ycm"
+  if not vim.fn.executable(bin) then
+    log "The ycm binary is not available. ycm.nvim cannot function without it"
+    return
+  end
+
+  remote_job_id = vim.fn.jobstart( bin, { rpc = true, on_exit = on_exit } )
+  if remote_job_id <= 0 then
+    log "Failed to spawn ycm plugin"
+    return
+  end
+
+  init(remote_job_id)
+end
+
+
+function M.setup()
+  vim.o.completeopt = "menuone,noinsert,noselect"
+  vim.cmd[[set shortmess+=c]]
+
+  setup_autocmds()
+  start_ycm()
+end
+
 
 return M
