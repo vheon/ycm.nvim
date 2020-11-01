@@ -436,14 +436,6 @@ local function setup_autocmds()
   autocmd.define_autocmd({'TextChangedP'}, '*', {on_event = complete_p}, {group = 'ycm'})
 end
 
-local function init(jobid)
-  remote_job_id = jobid
-
-  -- We might be loaded lazily so we have to try to process the buffer we're in
-  -- the same way we process buffer on FileType set.
-  refresh_identifiers()
-end
-
 local function on_exit(...)
   remote_job_id = nil
   -- XXX(andrea): we should:
@@ -464,7 +456,9 @@ local function start_ycm()
     return
   end
 
-  init(remote_job_id)
+  -- We might be loaded lazily so we have to try to process the buffer we're in
+  -- the same way we process buffer on FileType set.
+  refresh_identifiers()
 end
 
 
