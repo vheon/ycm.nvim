@@ -11,6 +11,8 @@
 -- See the License for the specific language governing permissions and
 --    limitations under the License.
 
+local autocmd = require('ycm.autocmd')
+
 -- XXX(andrea): this upper case M is really bugging me. Find a proper name.
 -- Maybe just `ycm`? or `client` as in a client for `ycmd`?
 local M = {}
@@ -138,6 +140,33 @@ function M.on_exit(...)
   -- * provide a command to setup the plugin again.
 end
 
+local function setup_autocmds()
+  -- XXX(andrea): once we verify that this is working we can loose the `M` prefix for all of them
+  autocmd.define_augroup('ycm', true)
+  -- XXX(andrea): the FileType event should also handle the case where a
+  -- buffer change Filetype after it is loaded.
+  autocmd.define_autocmd({'FileType'}, '*', {on_event = M.initialize_buffer}, {group='ycm'})
+  -- autocmd.define_autocmd({'FileType'}, '*', M.refresh_identifiers)
+
+  -- XXX(andrea): all the autocmd that follow should actually be for <buffer>
+  -- that has been validated and are compatible. Otherwise we are firing lua
+  -- function only to do checks we already know failed and exit.
+  autocmd.define_autocmd({'BufUnload'}, '*', {on_event = M.on_buf_unload}, {abuf = true, group='ycm'})
+
+  autocmd.define_autocmd({'TextChanged'}, '*', {on_event = M.refresh_identifiers}, {group = 'ycm'})
+  autocmd.define_autocmd({'InsertLeave'}, '*', {on_event = M.refresh_identifiers_if_needed}, {group = 'ycm'})
+
+  autocmd.define_autocmd({'TextChangedI'}, '*', {on_event = M.complete}, {group = 'ycm'})
+  autocmd.define_autocmd({'TextChangedP'}, '*', {on_event = M.complete_p}, {group = 'ycm'})
+end
+
+function M.setup()
+  vim.o.completeopt = "menuone,noinsert,noselect"
+  vim.cmd[[set shortmess+=c]]
+
+  setup_autocmds()
+  M.start_ycm()
+end
 
 local function collect_and_send_refresh_identifiers()
   local bufnr = vim.api.nvim_get_current_buf()
