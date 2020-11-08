@@ -138,10 +138,6 @@ local function show_candidates(id, cands)
   vim.fn.complete(startcol, candidates)
 end
 
-local function nvim_b_get(bufnr, key)
-  return nil_wrap(vim.api.nvim_buf_get_var, key)
-end
-
 local function check_requirement_for_buffer()
   local bufnr = vim.api.nvim_get_current_buf()
   local buffer = buffers[bufnr]
@@ -155,13 +151,7 @@ local function check_requirement_for_buffer()
     return false
   end
 
-  -- XXX(andrea): I think it would be better to have something like:
-  -- `if vim.b.ycm_nvim_largefile == 1 then`
-  -- so either:
-  -- * import the `nvim.lua` module
-  -- * wait if it will be ever implemented on stdlib `vim` module
-  -- * do not care about it
-  if nvim_b_get(bufnr, 'ycm_nvim_largefile') == 1 then
+  if vim.b.ycm_nvim_largefile then
     return false
   end
   local threshold = vim.g.ycm_disable_for_files_larger_than_kb
@@ -171,11 +161,11 @@ local function check_requirement_for_buffer()
   threshold = threshold * 1024
   local fp = vim.api.nvim_buf_get_name(bufnr)
   if vim.fn.getfsize(fp) > threshold then
-    vim.api.nvim_buf_set_var(bufnr, 'ycm_nvim_largefile', 1)
+    vim.b.ycm_nvim_largefile = true
     return false, "ycm.nvim is disabled in this buffer; the file exceed the max size."
   end
 
-  if nvim_b_get(bufnr, 'ycm_nvim_no_parser') == 1 then
+  if vim.b.ycm_nvim_no_parser then
     return false
   end
 
@@ -189,13 +179,13 @@ local function check_requirement_for_buffer()
   ]]
 
   if not parsers.has_parser() then
-    vim.api.nvim_buf_set_var(bufnr, 'ycm_nvim_no_parser', 1)
+    vim.b.ycm_nvim_no_parser = true
     return false, "ycm.nvim is disabled in this buffer; a suitable tree-sitter parser is not available."
   end
 
-  local buffer = Buffer:new(bufnr, ft, query)
+  local buffer = Buffer:new(bufnr, ft)
   if buffer.query == nil then
-    vim.api.nvim_buf_set_var(bufnr, 'ycm_nvim_no_parser', 1)
+    vim.b.ycm_nvim_no_parser = true
     return false, "ycm.nvim is disabled in this buffer; a suitable tree-sitter query is not available."
   end
   buffers[ bufnr ] = buffer
