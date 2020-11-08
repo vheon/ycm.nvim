@@ -13,6 +13,7 @@
 
 local parsers = require'nvim-treesitter.parsers'
 local tsq = require'vim.treesitter.query'
+local queries = require'nvim-treesitter.query'
 local autocmd = require'ycm.autocmd'
 
 -- XXX(andrea): find out if there is a better way in lua.
@@ -24,26 +25,18 @@ local remote_job_id = nil
 
 local buffers = {}
 
--- stolen from the vim module
-local function pcall_ret(status, ...)
-  if status then return ... end
-end
-
-local function nil_wrap(fn, ...)
-  return pcall_ret(pcall(fn, ...))
-end
-
 local Buffer = {}
 
-function Buffer:new(bufnr, ft, query)
+function Buffer:new(bufnr, ft)
+  local lang = parsers.ft_to_lang(ft)
   self.__index = self
   return setmetatable({
     bufnr = bufnr,
     ft = ft,
     -- XXX(andrea): once we start integrating more with nvim-treesitter we
     -- should probably pass the lang directly
-    parser = parsers.get_parser(bufnr, parsers.ft_to_lang(ft)),
-    query = nil_wrap(vim.treesitter.parse_query, ft, query),
+    parser = parsers.get_parser(bufnr, lang),
+    query = queries.get_query(lang, 'completion'),
     tick = vim.api.nvim_buf_get_changedtick(bufnr)
   }, Buffer)
 end
@@ -59,9 +52,6 @@ function Buffer:require_refresh()
   return self.tick ~= vim.api.nvim_buf_get_changedtick(self.bufnr)
 end
 
--- XXX(andrea): this function is taken from treesitter.lua in neovim repo
--- it looks useful on its own. Should we ask to add it as a method on the node
--- itself? or simply as part of the treesitter api like `vim.treesitter.get_node_text(node, bufnr)`
 function Buffer:identifiers()
   local tree = self:parse()
 
@@ -159,15 +149,6 @@ local function check_requirement_for_buffer()
   if vim.b.ycm_nvim_no_parser then
     return false
   end
-
-  -- XXX(andrea): the query should be for each filetype with some sane default
-  -- for each but configurable by the user.
-  local query = [[
-    (identifier) @identifier
-    (type_identifier) @type_identifier
-    (field_identifier) @field_identifier
-    (namespace_identifier) @namespace_identifier
-  ]]
 
   if not parsers.has_parser() then
     vim.b.ycm_nvim_no_parser = true
