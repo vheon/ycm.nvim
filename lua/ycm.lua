@@ -238,8 +238,8 @@ local function on_buf_unload(bufnr)
 end
 
 local function get_position()
-  local cursor = vim.api.nvim_win_get_cursor(0)
-  return cursor[1] - 1, cursor[2]
+  local row, col = unpack(vim.api.nvim_win_get_cursor(0))
+  return row - 1, col
 end
 
 local function complete()
@@ -266,7 +266,7 @@ local function complete()
   if querylen >= 2 then
     complete_id = complete_id + 1
     startcol = col + 1 - querylen
-    vim.rpcnotify(remote_job_id, "complete", complete_id, buffer.ft, query )
+    vim.rpcnotify(remote_job_id, "complete", complete_id, buffer.ft, query)
   end
 end
 
