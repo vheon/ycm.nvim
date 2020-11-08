@@ -12,6 +12,7 @@
 --    limitations under the License.
 
 local parsers = require'nvim-treesitter.parsers'
+local tsq = require'vim.treesitter.query'
 local autocmd = require'ycm.autocmd'
 
 -- XXX(andrea): find out if there is a better way in lua.
@@ -61,16 +62,6 @@ end
 -- XXX(andrea): this function is taken from treesitter.lua in neovim repo
 -- it looks useful on its own. Should we ask to add it as a method on the node
 -- itself? or simply as part of the treesitter api like `vim.treesitter.get_node_text(node, bufnr)`
-local a = vim.api
-local function get_node_text(node, bufnr)
-  local start_row, start_col, end_row, end_col = node:range()
-  if start_row ~= end_row then
-    return nil
-  end
-  local line = a.nvim_buf_get_lines(bufnr, start_row, start_row+1, true)[1]
-  return string.sub(line, start_col+1, end_col)
-end
-
 function Buffer:identifiers()
   local tree = self:parse()
 
@@ -78,7 +69,7 @@ function Buffer:identifiers()
 
   local identifiers = {}
   for _, node in self.query:iter_captures(tree:root(), self.bufnr, 1, lines) do
-      local text = get_node_text(node, self.bufnr)
+      local text = tsq.get_node_text(node, self.bufnr)
       if text ~= nil then
         identifiers[text] = true
       end
@@ -266,7 +257,7 @@ local function complete()
     return
   end
 
-  local query = get_node_text(identifier, bufnr)
+  local query = tsq.get_node_text(identifier, bufnr)
   if query == nil then
     return
   end
