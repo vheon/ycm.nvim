@@ -269,22 +269,22 @@ local function complete_p()
 end
 
 local function setup_autocmds()
-  autocmd.define_augroup('ycm', true)
+  autocmd.augroup_define('ycm', true)
   -- XXX(andrea): the FileType event should also handle the case where a
   -- buffer change Filetype after it is loaded.
-  autocmd.define_autocmd({'FileType'}, '*', {on_event = initialize_buffer}, {group='ycm'})
-  -- autocmd.define_autocmd({'FileType'}, '*', refresh_identifiers)
+  autocmd.autocmd_define('FileType', '*', {on_event = initialize_buffer}, {group='ycm'})
+  -- autocmd.autocmd_define({'FileType'}, '*', refresh_identifiers)
 
   -- XXX(andrea): all the autocmd that follow should actually be for <buffer>
   -- that has been validated and are compatible. Otherwise we are firing lua
   -- function only to do checks we already know failed and exit.
-  autocmd.define_autocmd({'BufUnload'}, '*', {on_event = on_buf_unload}, {abuf = true, group='ycm'})
+  autocmd.autocmd_define('BufUnload', '*', {on_event = on_buf_unload}, {abuf = true, group='ycm'})
 
-  autocmd.define_autocmd({'TextChanged'}, '*', {on_event = refresh_identifiers}, {group = 'ycm'})
-  autocmd.define_autocmd({'InsertLeave'}, '*', {on_event = refresh_identifiers_if_needed}, {group = 'ycm'})
+  autocmd.autocmd_define('TextChanged', '*', {on_event = refresh_identifiers}, {group = 'ycm'})
+  autocmd.autocmd_define('InsertLeave', '*', {on_event = refresh_identifiers_if_needed}, {group = 'ycm'})
 
-  autocmd.define_autocmd({'TextChangedI'}, '*', {on_event = complete}, {group = 'ycm'})
-  autocmd.define_autocmd({'TextChangedP'}, '*', {on_event = complete_p}, {group = 'ycm'})
+  autocmd.autocmd_define('TextChangedI', '*', {on_event = complete}, {group = 'ycm'})
+  autocmd.autocmd_define('TextChangedP', '*', {on_event = complete_p}, {group = 'ycm'})
 end
 
 local function on_exit(...)
@@ -312,11 +312,16 @@ local function start_ycm()
   refresh_identifiers()
 end
 
-
 local function setup()
+  -- XXX(andrea): would this be better to be something like:
+  -- vim.o.completeopt = {"menuone", "noinsert", "noselect"}
   vim.o.completeopt = "menuone,noinsert,noselect"
+  -- XXX(andrea): would this be better to be something like:
+  -- vim.o.shortmess = vim.o.shortmess + 'c'
   vim.cmd[[set shortmess+=c]]
 
+  -- XXX(andrea): maybe we should first start the process and if successful
+  -- setup the autocmds.
   setup_autocmds()
   start_ycm()
 end

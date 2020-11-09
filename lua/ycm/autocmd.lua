@@ -6,7 +6,7 @@ local M = {
   _CB = {}
 }
 
-function M.define_augroup(group, clear)
+function M.augroup_define(group, clear)
   vim.cmd('augroup '..group)
   if clear then
   vim.cmd[[autocmd!]]
@@ -29,16 +29,9 @@ local function prepare_cmd(cb, abuf)
   return 'lua '..fn..'()'
 end
 
-function M.define_autocmd(events, pattern, callbacks, options)
-  -- The upstream PR still doesn't have a buffer option but I think (hope) it
-  -- will be added, so let's simulate this anyway for now.
-  local buffer = options.buffer
-  if buffer ~= nil then
-    if type(buffer) == "number" then
-      pattern = "<buffer="..buffer..">"
-    else
-      pattern = "<buffer>"
-    end
+function M.autocmd_define(events, pattern, callbacks, options)
+  if type(events) == 'table' then
+    events = table.concat(events, ',')
   end
 
   local once = options.once and "++once" or ""
@@ -47,9 +40,8 @@ function M.define_autocmd(events, pattern, callbacks, options)
   local cmd = prepare_cmd(callbacks.on_event, options.abuf)
 
   local group = options.group or "END"
-  local event_str = table.concat(events, " ")
   vim.cmd("augroup "..group)
-  local full = join("autocmd ", event_str, pattern, once, nested, cmd)
+  local full = join("autocmd", events, pattern, once, nested, cmd)
   vim.cmd(full)
   vim.cmd("augroup END")
 end
