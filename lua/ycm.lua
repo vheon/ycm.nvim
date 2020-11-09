@@ -43,9 +43,9 @@ end
 
 -- XXX(andrea): is `parse` a good name?
 -- XXX(andrea): if we set we up as nvim-treesitter module do we have to call `parse` on our own?
-function Buffer:parse()
+function Buffer:root()
   self.tick = vim.api.nvim_buf_get_changedtick(self.bufnr)
-  return self.parser:parse()
+  return self.parser:parse():root()
 end
 
 function Buffer:require_refresh()
@@ -53,12 +53,11 @@ function Buffer:require_refresh()
 end
 
 function Buffer:identifiers()
-  local tree = self:parse()
-
-  local lines = vim.api.nvim_buf_line_count(self.bufnr)
+  local root = self:root()
+  local start_row, _, end_row, _ = root:range()
 
   local identifiers = {}
-  for _, node in self.query:iter_captures(tree:root(), self.bufnr, 1, lines) do
+  for _, node in self.query:iter_captures(root, self.bufnr, start_row, end_row + 1) do
       local text = tsq.get_node_text(node, self.bufnr)
       if text ~= nil then
         identifiers[text] = true
@@ -68,9 +67,7 @@ function Buffer:identifiers()
 end
 
 function Buffer:identifier_at(row, col)
-  local tree = self:parse()
-
-  for _, node in self.query:iter_captures(tree:root(), self.bufnr, row, row + 1) do
+  for _, node in self.query:iter_captures(self:root(), self.bufnr, row, row + 1) do
     local start_row, start_col, end_row, end_col = node:range()
     if start_row == row and end_row == row and start_col < col and end_col >= col then
       -- XXX(andrea): check if this should be refined or if the first good one is enough
