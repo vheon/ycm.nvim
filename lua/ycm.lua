@@ -41,7 +41,6 @@ function Buffer:new(bufnr, ft)
   }, Buffer)
 end
 
--- XXX(andrea): is `parse` a good name?
 -- XXX(andrea): if we set we up as nvim-treesitter module do we have to call `parse` on our own?
 function Buffer:root()
   self.tick = vim.api.nvim_buf_get_changedtick(self.bufnr)
@@ -81,11 +80,12 @@ local function log(msg)
   vim.api.nvim_out_write(msg .. "\n")
 end
 
+-- XXX(andrea): this should probably be a method of Buffer
 local function collect_and_send_refresh_identifiers()
   local bufnr = vim.api.nvim_get_current_buf()
   local buffer = buffers[bufnr]
 
-  local ft = vim.bo.filetype
+  local ft = buffer.ft
   local fp = vim.api.nvim_buf_get_name(bufnr)
   local identifiers = buffer:identifiers()
   vim.rpcnotify(remote_job_id, "refresh_buffer_identifiers", ft, fp, identifiers)
@@ -116,21 +116,21 @@ local function show_candidates(id, cands)
   vim.fn.complete(startcol, candidates)
 end
 
-local function check_requirement_for_buffer()
+local function current_buffer()
   local bufnr = vim.api.nvim_get_current_buf()
   local buffer = buffers[bufnr]
 
   if buffer ~= nil then
-    return true
+    return buffer
   end
 
   local ft = vim.bo.filetype
   if ft == "" then
-    return false
+    return
   end
 
   if vim.b.ycm_nvim_largefile then
-    return false
+    return
   end
   local threshold = vim.g.ycm_disable_for_files_larger_than_kb
   if threshold == nil then
@@ -140,62 +140,54 @@ local function check_requirement_for_buffer()
   local fp = vim.api.nvim_buf_get_name(bufnr)
   if vim.fn.getfsize(fp) > threshold then
     vim.b.ycm_nvim_largefile = true
-    return false, "ycm.nvim is disabled in this buffer; the file exceed the max size."
+    log("ycm.nvim is disabled in this buffer; the file exceed the max size.")
+    return
   end
 
   if vim.b.ycm_nvim_no_parser then
-    return false
+    return
   end
 
   if not parsers.has_parser() then
     vim.b.ycm_nvim_no_parser = true
-    return false, "ycm.nvim is disabled in this buffer; a suitable tree-sitter parser is not available."
+    log("ycm.nvim is disabled in this buffer; a suitable tree-sitter parser is not available.")
+    return
   end
 
   local buffer = Buffer:new(bufnr, ft)
   if buffer.query == nil then
     vim.b.ycm_nvim_no_parser = true
-    return false, "ycm.nvim is disabled in this buffer; a suitable tree-sitter query is not available."
+    log("ycm.nvim is disabled in this buffer; a suitable tree-sitter query is not available.")
+    return
   end
   buffers[ bufnr ] = buffer
 
-  return true
-end
-
-local function allowed_in_buffer()
-  local allowed, msg = check_requirement_for_buffer()
-  if msg ~= nil then
-    log(msg)
-  end
-  return allowed
+  return buffer
 end
 
 local function refresh_identifiers()
-  if not allowed_in_buffer() then
+  if current_buffer() == nil then
     return
   end
   collect_and_send_refresh_identifiers()
 end
 
 local function initialize_buffer()
-  local bufnr = vim.api.nvim_get_current_buf()
-  local buffer = buffers[bufnr]
+  local buffer = current_buffer()
 
   if buffer ~= nil and buffer.ft ~= vim.bo.filetype then
     log("reset ycmbuffer due to change of filetype")
-    buffers[bufnr] = nil
+    buffers[buffer.bufnr] = nil
   end
 
   refresh_identifiers()
 end
 
 function refresh_identifiers_if_needed()
-  if not allowed_in_buffer() then
+  local buffer = current_buffer()
+  if buffer == nil then
     return
   end
-
-  local bufnr = vim.api.nvim_get_current_buf()
-  local buffer = buffers[bufnr]
 
   if not buffer:require_refresh() then
     return
@@ -220,13 +212,11 @@ local function get_position()
   return row - 1, col
 end
 
-local function complete()
-  if not allowed_in_buffer() then
+local function complete(buffer)
+  buffer = buffer or current_buffer()
+  if buffer == nil then
     return
   end
-
-  local bufnr = vim.api.nvim_get_current_buf()
-  local buffer = buffers[bufnr]
 
   local row, col = get_position()
 
@@ -235,21 +225,22 @@ local function complete()
     return
   end
 
-  local query = tsq.get_node_text(identifier, bufnr)
-  if query == nil then
+  local input = tsq.get_node_text(identifier, buffer.bufnr)
+  if input == nil then
     return
   end
-  local querylen = query:len()
+  local querylen = input:len()
 
   if querylen >= 2 then
     complete_id = complete_id + 1
     startcol = col + 1 - querylen
-    vim.rpcnotify(remote_job_id, "complete", complete_id, buffer.ft, query)
+    vim.rpcnotify(remote_job_id, "complete", complete_id, buffer.ft, input)
   end
 end
 
 local function complete_p()
-  if not allowed_in_buffer() then
+  local buffer = current_buffer()
+  if buffer == nil then
     return
   end
 
@@ -265,7 +256,7 @@ local function complete_p()
     return
   end
 
-  complete()
+  complete(buffer)
 end
 
 local function setup_autocmds()
