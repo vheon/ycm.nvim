@@ -80,15 +80,9 @@ local function log(msg)
   vim.api.nvim_out_write(msg .. "\n")
 end
 
--- XXX(andrea): this should probably be a method of Buffer
-local function collect_and_send_refresh_identifiers()
-  local bufnr = vim.api.nvim_get_current_buf()
-  local buffer = buffers[bufnr]
-
-  local ft = buffer.ft
-  local fp = vim.api.nvim_buf_get_name(bufnr)
-  local identifiers = buffer:identifiers()
-  vim.rpcnotify(remote_job_id, "refresh_buffer_identifiers", ft, fp, identifiers)
+local function collect_and_send_refresh_identifiers(buffer)
+  local fp = vim.api.nvim_buf_get_name(buffer.bufnr)
+  vim.rpcnotify(remote_job_id, "refresh_buffer_identifiers", buffer.ft, fp, buffer:identifiers())
 end
 
 local function show_candidates(id, cands)
@@ -166,10 +160,10 @@ local function current_buffer()
 end
 
 local function refresh_identifiers()
-  if current_buffer() == nil then
-    return
+  local buffer = current_buffer()
+  if buffer ~= nil then
+    collect_and_send_refresh_identifiers(buffer)
   end
-  collect_and_send_refresh_identifiers()
 end
 
 local function initialize_buffer()
@@ -185,15 +179,9 @@ end
 
 function refresh_identifiers_if_needed()
   local buffer = current_buffer()
-  if buffer == nil then
-    return
+  if buffer ~= nil and buffer:require_refresh() then
+    collect_and_send_refresh_identifiers(buffer)
   end
-
-  if not buffer:require_refresh() then
-    return
-  end
-
-  collect_and_send_refresh_identifiers()
 end
 
 -- XXX(andrea): right now ycmd is not able to handle unload of buffers for the
