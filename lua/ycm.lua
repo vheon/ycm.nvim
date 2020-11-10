@@ -217,11 +217,11 @@ local function complete(buffer)
   if input == nil then
     return
   end
-  local querylen = input:len()
+  local inputlen = input:len()
 
-  if querylen >= 2 then
+  if inputlen >= 2 then
     complete_id = complete_id + 1
-    startcol = col + 1 - querylen
+    startcol = col + 1 - inputlen
     vim.rpcnotify(remote_job_id, "complete", complete_id, buffer.ft, input)
   end
 end
