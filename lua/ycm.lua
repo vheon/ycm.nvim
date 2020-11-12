@@ -43,8 +43,11 @@ end
 
 -- XXX(andrea): if we set we up as nvim-treesitter module do we have to call `parse` on our own?
 function Buffer:root()
-  self.tick = vim.api.nvim_buf_get_changedtick(self.bufnr)
   return self.parser:parse():root()
+end
+
+function Buffer:changedtick()
+  self.tick = vim.api.nvim_buf_get_changedtick(self.bufnr)
 end
 
 function Buffer:require_refresh()
@@ -83,6 +86,7 @@ end
 local function collect_and_send_refresh_identifiers(buffer)
   local fp = vim.api.nvim_buf_get_name(buffer.bufnr)
   vim.rpcnotify(remote_job_id, "refresh_buffer_identifiers", buffer.ft, fp, buffer:identifiers())
+  buffer:changedtick()
 end
 
 local function show_candidates(id, cands)
