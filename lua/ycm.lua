@@ -19,8 +19,10 @@ local autocmd = require'ycm.autocmd'
 -- XXX(andrea): find out if there is a better way in lua.
 local plugin_directory = vim.fn.fnamemodify(vim.fn.resolve(vim.fn.expand('<sfile>:p')), ':h:h')
 
-local complete_id = 0
-local startcol = 0
+local last_request = {
+  id = 0,
+  startcol = 0
+}
 local remote_job_id = nil
 
 local buffers = {}
@@ -91,7 +93,7 @@ end
 
 local function show_candidates(id, cands)
   -- throw away results for our of date requests
-  if complete_id ~= id then
+  if last_request.id ~= id then
     return
   end
 
@@ -111,7 +113,7 @@ local function show_candidates(id, cands)
   -- would then send us back so that we would not store data computed in the
   -- request phase only to be used on the response phase. I'm not sure how
   -- better of a design would be :/
-  vim.fn.complete(startcol, candidates)
+  vim.fn.complete(last_request.startcol, candidates)
 end
 
 local function current_buffer()
@@ -181,6 +183,7 @@ local function initialize_buffer()
   if buffer ~= nil and buffer.ft ~= vim.bo.filetype then
     log("reset ycmbuffer due to change of filetype")
     buffers[buffer.bufnr] = nil
+    vim.b.ycm_nvim_no_parser = nil
   end
 
   refresh_identifiers()
@@ -229,9 +232,10 @@ local function complete(buffer)
   local inputlen = input:len()
 
   if inputlen >= 2 then
-    complete_id = complete_id + 1
-    startcol = col + 1 - inputlen
-    vim.rpcnotify(remote_job_id, "complete", complete_id, buffer.ft, input)
+    last_request.id = last_request.id + 1
+    last_request.startcol = col + 1 - inputlen
+
+    vim.rpcnotify(remote_job_id, "complete", last_request.id, buffer.ft, input)
   end
 end
 
