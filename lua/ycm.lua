@@ -127,6 +127,9 @@ local function current_buffer()
     return
   end
 
+  -- XXX(andrea): this is a feature of YCM. I don't remember if it is ycmd to
+  -- become slow or if it is the client taking long to process it. We should
+  -- try with this lua/msgpack implementation and see if it is still a problem.
   if vim.b.ycm_nvim_largefile then
     return
   end
@@ -142,6 +145,8 @@ local function current_buffer()
     return
   end
 
+  -- XXX(andrea): could we instead create a buffer anyway but mark it invalid?
+  -- Would that simplify things?
   if vim.b.ycm_nvim_no_parser then
     return
   end
