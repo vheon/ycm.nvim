@@ -35,4 +35,5 @@ I rely heavily on the buffer completion of YouCompleteMe at the moment while I d
 - [ ] Put in place the whole CI/CD for the ycm binary (probably Azure Pipeline).
 - [ ] Find a way to properly test this thing. I would love to have something like the screen test of Neovim itself... maybe use exactly that!
 - [ ] Integrate with native LSP client in order to provide YCM fuzzy lookup (maybe look at https://github.com/haorenW1025/completion-nvim).
-- [ ] Try to move the VimL autocmd to the homemade lua API to experiment and prove the API (maybe if it does I could try to implement it directly in Neovim)
+- [x] Try to move the VimL autocmd to the homemade lua API to experiment and prove the API (maybe if it does I could try to implement it directly in Neovim)
+- [ ] Put in place statusline support for marking when we do not have ycm active due to missing parser or query
