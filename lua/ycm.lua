@@ -201,7 +201,7 @@ end
 -- the functionality to ycmd first. See if it is worth it and useful.
 local function on_buf_unload(bufnr)
   -- XXX(andrea): check if this is enough
-  log( "on_buf_unload "..bufnr)
+  -- log( "on_buf_unload "..bufnr)
   buffers[bufnr] = nil
   -- XXX(andrea): TODO
   -- vim.rpcnotify(remote_job_id, "unload", ft, query )
