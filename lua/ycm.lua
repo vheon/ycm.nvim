@@ -233,7 +233,8 @@ local function complete(buffer)
 
   if inputlen >= 2 then
     last_request.id = last_request.id + 1
-    last_request.startcol = col + 1 - inputlen
+    local _, start_col = identifier:range()
+    last_request.startcol = start_col + 1
 
     vim.rpcnotify(remote_job_id, "complete", last_request.id, buffer.ft, input)
   end
