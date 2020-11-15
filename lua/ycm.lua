@@ -92,7 +92,7 @@ local function collect_and_send_refresh_identifiers(buffer)
 end
 
 local function show_candidates(id, cands)
-  -- throw away results for our of date requests
+  -- throw away results for out of date requests
   if last_request.id ~= id then
     return
   end
@@ -101,7 +101,7 @@ local function show_candidates(id, cands)
   for _, candidate in ipairs(cands) do
     table.insert(candidates, {
       word = candidate,
-      menu =  "[ID]",
+      menu = "[ID]",
       equal = 1,
       dup = 1,
       icase =  1,
@@ -288,7 +288,7 @@ local function on_exit(...)
 end
 
 local function start_ycm()
-  local bin = plugin_directory .. "/build/ycm"
+  local bin = plugin_directory .. "/build/bin/ycm"
   if not vim.fn.executable(bin) then
     log "The ycm binary is not available. ycm.nvim cannot function without it"
     return
