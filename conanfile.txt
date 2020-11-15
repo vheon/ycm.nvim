@@ -1,0 +1,11 @@
+[requires]
+asio/1.14.1
+msgpack/3.2.1
+
+[generators]
+cmake_find_package
+
+[options]
+msgpack:c_api = False
+msgpack:cpp_api = True
+

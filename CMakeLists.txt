@@ -4,9 +4,25 @@ project(ycm.nvim VERSION 0.0.1 LANGUAGES CXX)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 set(CMAKE_CXX_STANDARD 17)
 
-include_directories(./third_party/msgpack-c/include)
-include_directories(./third_party/asio/asio/include)
-add_compile_definitions(ASIO_STANDALONE)
+# Download automatically, you can also just copy the conan.cmake file
+if(NOT EXISTS "${CMAKE_BINARY_DIR}/conan.cmake")
+   message(STATUS "Downloading conan.cmake from https://github.com/conan-io/cmake-conan")
+   file(DOWNLOAD "https://github.com/conan-io/cmake-conan/raw/v0.15/conan.cmake"
+                 "${CMAKE_BINARY_DIR}/conan.cmake" 
+                 TLS_VERIFY ON)
+endif()
+
+include(${CMAKE_BINARY_DIR}/conan.cmake)
+
+conan_check(REQUIRED)
+conan_cmake_run(CONANFILE conanfile.txt
+                BASIC_SETUP CMAKE_TARGETS
+                BUILD missing)
+
+set(CMAKE_MODULE_PATH ${CMAKE_BINARY_DIR})
+
+find_package(asio 1.4.1 REQUIRED)
+find_package(msgpack 3.2.1 REQUIRED)
 
 # XXX(AC): we have to integrate with ycmd build system
 add_definitions( -DYCM_EXPORT= )
@@ -27,4 +43,5 @@ set(YCMD_SOURCES
 "${YCMD_DIR}/Character.cpp"
 )
 
-add_executable(ycm main.cpp ${YCMD_SOURCES})
+add_executable(ycm "src/main.cpp" ${YCMD_SOURCES})
+target_link_libraries(ycm asio::asio msgpack::msgpack)
