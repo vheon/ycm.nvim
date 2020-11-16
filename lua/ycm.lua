@@ -261,6 +261,8 @@ local function complete_p()
   complete(buffer)
 end
 
+--[[
+--XXX(andrea): old API for autocmds
 local function setup_autocmds()
   autocmd.augroup_define('ycm', true)
   -- XXX(andrea): the FileType event should also handle the case where a
@@ -278,6 +280,50 @@ local function setup_autocmds()
 
   autocmd.autocmd_define('TextChangedI', '*', {on_event = complete}, {group = 'ycm'})
   autocmd.autocmd_define('TextChangedP', '*', {on_event = complete_p}, {group = 'ycm'})
+end
+--]]
+local function setup_autocmds()
+  autocmd.define_autocmd_group('ycm', { clear = true })
+  -- XXX(andrea): the FileType event should also handle the case where a
+  -- buffer change Filetype after it is loaded.
+  autocmd.define_autocmd {
+    event = 'FileType',
+    callback = initialize_buffer,
+    group = 'ycm'
+  }
+  -- autocmd.autocmd_define({'FileType'}, '*', refresh_identifiers)
+
+  -- XXX(andrea): all the autocmd that follow should actually be for <buffer>
+  -- that has been validated and are compatible. Otherwise we are firing lua
+  -- function only to do checks we already know failed and exit.
+  autocmd.define_autocmd {
+    event = 'BufUnload',
+    callback = on_buf_unload,
+    abuf = true,
+    group='ycm'
+  }
+
+  autocmd.define_autocmd {
+    event = 'TextChanged',
+    callback = refresh_identifiers,
+    group = 'ycm'
+  }
+  autocmd.define_autocmd {
+    event = 'InsertLeave',
+    callback = refresh_identifiers_if_needed,
+    group = 'ycm'
+  }
+
+  autocmd.define_autocmd {
+    event = 'TextChangedI',
+    callback = complete,
+    group = 'ycm'
+  }
+  autocmd.define_autocmd {
+    event = 'TextChangedP',
+    callback = complete_p,
+    group = 'ycm'
+  }
 end
 
 local function on_exit(...)
