@@ -6,16 +6,6 @@ local M = {
   _CB = {}
 }
 
---[[
-function M.augroup_define(group, clear)
-  vim.cmd('augroup '..group)
-  if clear then
-    vim.cmd[[autocmd!]]
-  end
-  vim.cmd[[augroup END]]
-end
---]]
-
 function M.define_autocmd_group(group, opts)
   vim.cmd('augroup '..group)
   if opts.clear then
@@ -56,24 +46,5 @@ function M.define_autocmd(spec)
   vim.cmd(full)
   vim.cmd("augroup END")
 end
-
---[[
-function M.autocmd_define(events, pattern, callbacks, options)
-  if type(events) == 'table' then
-    events = table.concat(events, ',')
-  end
-
-  local once = options.once and "++once" or ""
-  local nested = options.nested and "++nested" or ""
-
-  local cmd = prepare_cmd(callbacks.on_event, options.abuf)
-
-  local group = options.group or "END"
-  vim.cmd("augroup "..group)
-  local full = join("autocmd", events, pattern, once, nested, cmd)
-  vim.cmd(full)
-  vim.cmd("augroup END")
-end
---]]
 
 return M
