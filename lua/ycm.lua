@@ -199,9 +199,10 @@ end
 -- XXX(andrea): right now ycmd is not able to handle unload of buffers for the
 -- identifier completer (which is what we use). Adding it would require adding
 -- the functionality to ycmd first. See if it is worth it and useful.
-local function on_buf_unload(bufnr)
+local function on_buf_unload()
   -- XXX(andrea): check if this is enough
   -- log( "on_buf_unload "..bufnr)
+  local bufnr = vim.fn.expand('<abuf>')
   buffers[bufnr] = nil
   -- XXX(andrea): TODO
   -- vim.rpcnotify(remote_job_id, "unload", ft, query )
@@ -278,7 +279,6 @@ local function setup_autocmds()
   autocmd.define_autocmd {
     event = 'BufUnload',
     callback = on_buf_unload,
-    abuf = true,
     group='ycm'
   }
 

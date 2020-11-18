@@ -9,24 +9,19 @@ local M = {
 function M.define_autocmd_group(group, opts)
   vim.cmd('augroup '..group)
   if opts.clear then
-    vim.cmd[[autocmd!]]
+    vim.cmd('autocmd!')
   end
-  vim.cmd[[augroup END]]
+  vim.cmd('augroup END')
 end
 
 local function join(...)
   return table.concat({...}, " ")
 end
 
-local function prepare_cmd(cb, abuf)
+local function lua_call(cb)
   local key = tostring(cb)
   M._CB[key] = cb
-
-  local fn = "require'ycm.autocmd'._CB['"..key.."']"
-  if abuf then
-    return string.format([[ call luaeval("%s(_A)", str2nr(expand('<abuf>'))) ]], fn)
-  end
-  return 'lua '..fn..'()'
+  return "lua require'ycm.autocmd'._CB['"..key.."']()"
 end
 
 function M.define_autocmd(spec)
@@ -38,13 +33,11 @@ function M.define_autocmd(spec)
   local once = spec.once and "++once" or ""
   local nested = spec.nested and "++nested" or ""
 
-  local cmd = prepare_cmd(spec.callback, spec.abuf)
+  local callback = lua_call(spec.callback)
+  local group = spec.group or ""
 
-  local group = spec.group or "END"
-  vim.cmd("augroup "..group)
-  local full = join("autocmd", event, pattern, once, nested, cmd)
+  local full = join("autocmd", group, event, pattern, once, nested, callback)
   vim.cmd(full)
-  vim.cmd("augroup END")
 end
 
 return M
