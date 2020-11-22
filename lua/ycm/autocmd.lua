@@ -29,15 +29,18 @@ function M.define_autocmd(spec)
   if type(event) == 'table' then
     event = table.concat(event, ',')
   end
+  local group = spec.group or ""
   local pattern = spec.pattern or "*"
   local once = spec.once and "++once" or ""
   local nested = spec.nested and "++nested" or ""
 
-  local callback = lua_call(spec.callback)
-  local group = spec.group or ""
+  local action = spec.command or ''
+  local callback = spec.callback
+  if callback ~= nil then
+    action = lua_call(callback)
+  end
 
-  local full = join("autocmd", group, event, pattern, once, nested, callback)
-  vim.cmd(full)
+  vim.cmd(join("autocmd", group, event, pattern, once, nested, action))
 end
 
 return M
