@@ -29,18 +29,45 @@ local buffers = {}
 
 local Buffer = {}
 
-function Buffer:new(bufnr, ft)
+function Buffer:new(bufnr)
+  local health = {}
+
+  local ft = vim.bo.filetype
+  if ft == "" then
+    health.no_ft = true
+  end
+
+  if not parsers.has_parser() then
+    health.missing_parser = true
+  end
+
   local lang = parsers.ft_to_lang(ft)
+  local query = queries.get_query(lang, 'completion')
+  if query == nil then
+    health.missing_query = true
+  end
+
+  local threshold = (vim.g.ycm_disable_for_files_larger_than_kb or 5000) * 1024
+  local fp = vim.api.nvim_buf_get_name(bufnr)
+  if vim.fn.getfsize(fp) > threshold then
+    health.buffer_too_large = true
+  end
+
   self.__index = self
   return setmetatable({
+    health = health,
     bufnr = bufnr,
     ft = ft,
     -- XXX(andrea): once we start integrating more with nvim-treesitter we
     -- should probably pass the lang directly
     parser = parsers.get_parser(bufnr, lang),
-    query = queries.get_query(lang, 'completion'),
+    query = query,
     tick = vim.api.nvim_buf_get_changedtick(bufnr)
   }, Buffer)
+end
+
+function Buffer:valid()
+  return vim.tbl_isempty(self.health)
 end
 
 -- XXX(andrea): if we set we up as nvim-treesitter module do we have to call `parse` on our own?
@@ -124,66 +151,33 @@ local function current_buffer()
     return buffer
   end
 
-  local ft = vim.bo.filetype
-  if ft == "" then
-    return
-  end
-
-  -- XXX(andrea): this is a feature of YCM. I don't remember if it is ycmd to
-  -- become slow or if it is the client taking long to process it. We should
-  -- try with this lua/msgpack implementation and see if it is still a problem.
-  if vim.b.ycm_nvim_largefile then
-    return
-  end
-  local threshold = vim.g.ycm_disable_for_files_larger_than_kb
-  if threshold == nil then
-    threshold = 5000
-  end
-  threshold = threshold * 1024
-  local fp = vim.api.nvim_buf_get_name(bufnr)
-  if vim.fn.getfsize(fp) > threshold then
-    vim.b.ycm_nvim_largefile = true
-    log("ycm.nvim is disabled in this buffer; the file exceed the max size.")
-    return
-  end
-
-  -- XXX(andrea): could we instead create a buffer anyway but mark it invalid?
-  -- Would that simplify things?
-  if vim.b.ycm_nvim_no_parser then
-    return
-  end
-
-  if not parsers.has_parser() then
-    vim.b.ycm_nvim_no_parser = true
-    log("ycm.nvim is disabled in this buffer; a suitable tree-sitter parser is not available.")
-    return
-  end
-
-  local buffer = Buffer:new(bufnr, ft)
-  if buffer.query == nil then
-    vim.b.ycm_nvim_no_parser = true
-    log("ycm.nvim is disabled in this buffer; a suitable tree-sitter query is not available.")
-    return
-  end
+  buffer = Buffer:new(bufnr)
+  vim.b.ycm_enabled = buffer:valid()
   buffers[ bufnr ] = buffer
 
   return buffer
 end
 
+local function buffer_status()
+  local buffer = current_buffer()
+  if buffer:valid() then
+    log('Enabled in current buffer')
+  else
+    log('Disabled in current buffer: ' .. vim.inspect(buffer.health))
+  end
+end
+
 local function refresh_identifiers()
   local buffer = current_buffer()
-  if buffer ~= nil then
+  if buffer:valid() then
     collect_and_send_refresh_identifiers(buffer)
   end
 end
 
 local function initialize_buffer()
   local buffer = current_buffer()
-
-  if buffer ~= nil and buffer.ft ~= vim.bo.filetype then
-    log("reset ycmbuffer due to change of filetype")
+  if buffer.ft ~= vim.bo.filetype then
     buffers[buffer.bufnr] = nil
-    vim.b.ycm_nvim_no_parser = nil
   end
 
   refresh_identifiers()
@@ -191,7 +185,7 @@ end
 
 function refresh_identifiers_if_needed()
   local buffer = current_buffer()
-  if buffer ~= nil and buffer:require_refresh() then
+  if buffer:valid() and buffer:require_refresh() then
     collect_and_send_refresh_identifiers(buffer)
   end
 end
@@ -215,7 +209,7 @@ end
 
 local function complete(buffer)
   buffer = buffer or current_buffer()
-  if buffer == nil then
+  if not buffer:valid() then
     return
   end
 
@@ -243,7 +237,7 @@ end
 
 local function complete_p()
   local buffer = current_buffer()
-  if buffer == nil then
+  if not buffer:valid() then
     return
   end
 
@@ -307,6 +301,11 @@ end
 
 local function on_exit(...)
   remote_job_id = nil
+  buffers = {}
+
+  -- This should clear the autocmds.
+  -- XXX(andrea): we should probably put the group name in a variable
+  autocmd.define_autocmd_group('ycm', { clear = true })
   -- XXX(andrea): we should:
   -- * remove all autocommands.
   -- * provide a command to setup the plugin again.
@@ -319,15 +318,16 @@ local function start_ycm()
     return
   end
 
-  remote_job_id = vim.fn.jobstart( bin, { rpc = true, on_exit = on_exit } )
-  if remote_job_id <= 0 then
+  local id = vim.fn.jobstart(bin, { rpc = true, on_exit = on_exit })
+  if id <= 0 then
     log "Failed to spawn ycm plugin"
     return
   end
+  return id
+end
 
-  -- We might be loaded lazily so we have to try to process the buffer we're in
-  -- the same way we process buffer on FileType set.
-  refresh_identifiers()
+local function define_commands()
+  vim.cmd [[command! YcmStatus lua require('ycm').buffer_status()]]
 end
 
 local function setup()
@@ -340,12 +340,19 @@ local function setup()
 
   -- XXX(andrea): maybe we should first start the process and if successful
   -- setup the autocmds.
-  setup_autocmds()
-  start_ycm()
-end
+  remote_job_id = start_ycm()
+  if remote_job_id ~= nil then
+    setup_autocmds()
+    define_commands()
 
+    -- We might be loaded lazily so we have to try to process the buffer we're in
+    -- the same way we process buffer on FileType set.
+    refresh_identifiers()
+  end
+end
 
 return {
   setup = setup,
+  buffer_status = buffer_status,
   show_candidates = show_candidates
 }
