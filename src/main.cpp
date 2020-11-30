@@ -364,63 +364,11 @@ public:
     {
       handle_complete( notification.params.as< complete_notification >() );
     }
-#if 0
-    else if ( notification.method == "test_for_lua" )
-    {
-      std::tuple< std::string, std::tuple<> > params{ "require('ycm').test_function()" };
-      rpc_request< decltype( params ) > req{ m_next_id++, "nvim_exec_lua", std::move( params ) };
-      async_send_request( req, [this]( const rpc_response< msgpack::object, msgpack::object >& response ) {
-        if ( response.error.type != msgpack::type::NIL )
-        {
-          m_log << "Error with message sent: " << response.error << std::endl;
-          return;
-        }
-        m_log << response.result << std::endl;
-      } );
-    }
-#endif
   }
 
   void handle_refresh_buffer_identifiers( const refresh_buffer_identifiers_notification& notification )
   {
-    // XXX(andrea): if we find out that it would be better to not create a
-    // vector but an iterator would be more efficient we can always bring back
-    // parts of this code
-#if 0
-    if ( notification.identifiers.type != msgpack::type::ARRAY )
-    {
-      throw msgpack::type_error();
-    }
-
-    const msgpack::object_array& identifiers = notification.identifiers.via.array;
-
-    // XXX(andrea): we probably need boost:transform_iterator
-    // XXX(andrea): here is where we should pass the values to ycmd's IdentifierCompleter
-
-    // XXX(andrea): until we try to change ycmd to use string we have to comply with its interface
-    std::vector< std::string > candidates;
-    candidates.reserve( identifiers.size );
-    for ( auto it = msgpack::begin( identifiers ), end = msgpack::end( identifiers );
-          it != end;
-          ++it )
-    {
-      candidates.push_back( it->as< std::string >() );
-    }
-#else
-#ifdef DEBUG
-    m_log << "[handle_refresh_buffer_identifiers] filetype: " << notification.filetype
-          << "filepath: " << notification.filepath << std::endl;
-
-    m_log << notification.identifiers << std::endl;
-#endif
     auto candidates = notification.identifiers.as< std::vector< std::string > >();
-#ifdef DEBUG
-    m_log << "[";
-    for ( const auto& str : candidates )
-      m_log << ", " << str;
-    m_log << "]" << std::endl;
-#endif
-#endif
     m_completer.ClearForFileAndAddIdentifiersToDatabase( std::move( candidates ),
                                                          notification.filetype,
                                                          notification.filepath );
@@ -432,15 +380,6 @@ public:
     return rpc_request< Parameters >{ m_next_id++,
                                       std::move( method ),
                                       std::forward< Parameters >( parameters ) };
-  }
-
-  template< typename... Parameters >
-  auto create_nvim_call_function_request( std::string function, Parameters&&... parameters )
-  {
-    return create_rpc_request(
-        "nvim_call_function",
-        nvim_call_function_payload< Parameters... >{ std::move( function ),
-                                                     std::forward< Parameters >( parameters )... } );
   }
 
   template < typename... Parameters >
