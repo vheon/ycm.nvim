@@ -369,9 +369,14 @@ public:
   void handle_refresh_buffer_identifiers( const refresh_buffer_identifiers_notification& notification )
   {
     auto candidates = notification.identifiers.as< std::vector< std::string > >();
-    m_completer.ClearForFileAndAddIdentifiersToDatabase( std::move( candidates ),
-                                                         notification.filetype,
-                                                         notification.filepath );
+    // XXX(andrea): in the commit we're at
+    // ClearForFileAndAddIdentifiersToDatabase takes the filetype and filepath
+    // as non-const std::string refs. Look this better and see what should we
+    // do... maybe just get the notification as a copy? we could move it in
+    // since it is already a temporary.
+    std::string filetype = notification.filetype;
+    std::string filepath = notification.filepath;
+    m_completer.ClearForFileAndAddIdentifiersToDatabase( std::move( candidates ), filetype, filepath );
   }
 
   template< typename Parameters >

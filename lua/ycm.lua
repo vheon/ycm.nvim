@@ -72,7 +72,7 @@ end
 
 -- XXX(andrea): if we set we up as nvim-treesitter module do we have to call `parse` on our own?
 function Buffer:root()
-  return self.parser:parse():root()
+  return self.parser:parse()[1]:root()
 end
 
 function Buffer:changedtick()

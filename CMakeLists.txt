@@ -41,6 +41,8 @@ set(YCMD_SOURCES
 "${YCMD_DIR}/Candidate.cpp"
 "${YCMD_DIR}/Result.cpp"
 "${YCMD_DIR}/Character.cpp"
+"${YCMD_DIR}/Utils.cpp"
+"${YCMD_DIR}/IdentifierUtils.cpp"
 )
 
 add_executable(ycm "src/main.cpp" ${YCMD_SOURCES})
