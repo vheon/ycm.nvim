@@ -307,7 +307,6 @@ local function on_exit(...)
   -- XXX(andrea): we should probably put the group name in a variable
   autocmd.define_autocmd_group('ycm', { clear = true })
   -- XXX(andrea): we should:
-  -- * remove all autocommands.
   -- * provide a command to setup the plugin again.
 end
 
@@ -338,8 +337,6 @@ local function setup()
   -- vim.o.shortmess = vim.o.shortmess + 'c'
   vim.cmd[[set shortmess+=c]]
 
-  -- XXX(andrea): maybe we should first start the process and if successful
-  -- setup the autocmds.
   remote_job_id = start_ycm()
   if remote_job_id ~= nil then
     setup_autocmds()
