@@ -403,7 +403,11 @@ public:
     m_log << "[handle_complete] query: " << notification.query << " for filetype: " << notification.filetype
           << std::endl;
 #endif
-    auto candidates = m_completer.CandidatesForQueryAndType( notification.query, notification.filetype );
+    // this max_candidates should come from the client as a configuration parameter
+    constexpr size_t max_candidates = 20;
+    // The latest ycmd API taks the query by reference because it then move it. IMHO is not a great API but it is true that it is not meant to be used outside of ycmd
+    std::string query = notification.query;
+    auto candidates = m_completer.CandidatesForQueryAndType( query, notification.filetype, max_candidates );
     async_send_request( create_nvim_exec_lua_request( "require'ycm'.show_candidates(...)",
                                                       notification.id,
                                                       std::move( candidates ) ),
