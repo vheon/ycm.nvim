@@ -306,6 +306,7 @@ protected:
     h( response );
   }
 
+  // XXX(andrea): we should use perfect-forwarding here
   template< typename Parameters >
   void basic_handle_request( const rpc_request< Parameters >& request )
   {
