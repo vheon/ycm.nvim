@@ -330,11 +330,10 @@ local function define_commands()
 end
 
 local function setup()
-  -- XXX(andrea): would this be better to be something like:
-  -- vim.o.completeopt = {"menuone", "noinsert", "noselect"}
+  -- XXX(andrea): when https://github.com/neovim/neovim/pull/13479 is merged these would be:
+  -- vim.opt.completeopt = {"menuone", "noinsert", "noselect"}
+  -- vim.opt.shortmess = vim.opt.shortmess + 'c'
   vim.o.completeopt = "menuone,noinsert,noselect"
-  -- XXX(andrea): would this be better to be something like:
-  -- vim.o.shortmess = vim.o.shortmess + 'c'
   vim.cmd[[set shortmess+=c]]
 
   remote_job_id = start_ycm()
