@@ -318,6 +318,7 @@ protected:
   }
 
 protected:
+  // XXX(andrea): replace this with `spdlog` so I can learn it and have proper logging.
   std::ofstream m_log;
 
 private:
