@@ -162,7 +162,6 @@ public:
                        std::forward< WriteHandler >( h ) );
   }
 
-  // XXX(andrea): this is here just as a skeleton because I'm not sure I will need it
   template< typename Parameters, typename ResponseHandler >
   void async_send_request( const rpc_request< Parameters >& request, ResponseHandler&& h )
   {
