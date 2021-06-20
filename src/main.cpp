@@ -424,7 +424,7 @@ public:
   // XXX(andrea): whishlist for the IdentifierCompleter:
   // - A way to abort a search
   // - A way to be mutex-free: If I'm asking for completion I would not add new Candidates so the mutexes are kinda moot in my simple usage, not sure for ycmd in general :/
-  // - Try to multithread the computing of matches
+  // - Try to multithread the computing of matches (https://github.com/ycm-core/ycmd/pull/1572)
   // - A way to pass an Allocator
   ycm::IdentifierCompleter m_completer;
 };
