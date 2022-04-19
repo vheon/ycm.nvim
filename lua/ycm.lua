@@ -14,7 +14,6 @@
 local parsers = require'nvim-treesitter.parsers'
 local tsq = require'vim.treesitter.query'
 local queries = require'nvim-treesitter.query'
-local autocmd = require'ycm.autocmd'
 
 -- XXX(andrea): find out if there is a better way in lua.
 local plugin_directory = vim.fn.fnamemodify(vim.fn.resolve(vim.fn.expand('<sfile>:p')), ':h:h')
@@ -257,46 +256,46 @@ local function complete_p()
 end
 
 local function setup_autocmds()
-  autocmd.define_autocmd_group('ycm', { clear = true })
+  local group = vim.api.nvim_create_augroup('ycm', { clear = true })
   -- XXX(andrea): the FileType event should also handle the case where a
   -- buffer change Filetype after it is loaded.
-  autocmd.define_autocmd {
-    event = 'FileType',
+  vim.api.nvim_create_autocmd( 'FileType', {
     callback = initialize_buffer,
-    group = 'ycm'
-  }
-  -- autocmd.autocmd_define({'FileType'}, '*', refresh_identifiers)
+    group = group,
+    desc = 'initialize buffer when the filetype is available'
+  })
+  -- vim.api.nvim_create_autocmd('FileType', { callback = refresh_identifiers })
 
   -- XXX(andrea): all the autocmd that follow should actually be for <buffer>
   -- that has been validated and are compatible. Otherwise we are firing lua
   -- function only to do checks we already know failed and exit.
-  autocmd.define_autocmd {
-    event = 'BufUnload',
+  vim.api.nvim_create_autocmd( 'BufUnload', {
     callback = on_buf_unload,
-    group='ycm'
-  }
+    group = group,
+    desc = 'throw away all the setup done for the buffer including parser'
+  })
 
-  autocmd.define_autocmd {
-    event = 'TextChanged',
+  vim.api.nvim_create_autocmd( 'TextChanged', {
     callback = refresh_identifiers,
-    group = 'ycm'
-  }
-  autocmd.define_autocmd {
-    event = 'InsertLeave',
+    group = group,
+    desc = 'refresh available identifiers on text change'
+  })
+  vim.api.nvim_create_autocmd( 'InsertLeave', {
     callback = refresh_identifiers_if_needed,
-    group = 'ycm'
-  }
+    group = group,
+    desc = 'refresh available identifiers only if something happened'
+  })
 
-  autocmd.define_autocmd {
-    event = 'TextChangedI',
-    callback = complete,
-    group = 'ycm'
-  }
-  autocmd.define_autocmd {
-    event = 'TextChangedP',
+  vim.api.nvim_create_autocmd( 'TextChangedI', {
+    callback = function() complete() end,
+    group = group,
+    desc = 'register keystroke and start showing possible completions'
+  })
+  vim.api.nvim_create_autocmd( 'TextChangedP', {
     callback = complete_p,
-    group = 'ycm'
-  }
+    group = group,
+    desc = 'continue filtering but handle candidate selection from the popup menu'
+  })
 end
 
 local function on_exit(...)
@@ -305,7 +304,7 @@ local function on_exit(...)
 
   -- This should clear the autocmds.
   -- XXX(andrea): we should probably put the group name in a variable
-  autocmd.define_autocmd_group('ycm', { clear = true })
+  vim.api.nvim_create_augroup('ycm', { clear = true })
   -- XXX(andrea): we should:
   -- * provide a command to setup the plugin again.
 end
