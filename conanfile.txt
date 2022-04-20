@@ -1,6 +1,7 @@
 [requires]
 asio/1.14.1
 msgpack/3.2.1
+abseil/20211102.0
 
 [generators]
 cmake_find_package

@@ -11,20 +11,22 @@
 // See the License for the specific language governing permissions and
 //    limitations under the License.
 
-#include <asio.hpp>
 #include <cstddef>
 #include <fstream>
 #include <ios>
 #include <iostream>
 #include <memory>
-#include <msgpack.hpp>
 #include <string>
 #include <thread>
 #include <unistd.h>
 #include <unordered_map>
 #include <utility>
 
+#include "Candidate.h"
 #include "IdentifierCompleter.h"
+
+#include <msgpack.hpp>
+#include <asio.hpp>
 
 constexpr uint32_t kREQUEST = 0;
 constexpr uint32_t kRESPONSE = 1;
@@ -377,7 +379,7 @@ public:
     // since it is already a temporary.
     std::string filetype = notification.filetype;
     std::string filepath = notification.filepath;
-    m_completer.ClearForFileAndAddIdentifiersToDatabase( std::move( candidates ), filetype, filepath );
+    m_completer.ClearForFileAndAddIdentifiersToDatabase( candidates, filetype, filepath );
   }
 
   template< typename Parameters >

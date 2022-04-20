@@ -23,27 +23,31 @@ set(CMAKE_MODULE_PATH ${CMAKE_BINARY_DIR})
 
 find_package(asio 1.4.1 REQUIRED)
 find_package(msgpack 3.2.1 REQUIRED)
-
-# XXX(AC): we have to integrate with ycmd build system
-add_definitions( -DYCM_EXPORT= )
+find_package(absl 20211102.0 REQUIRED)
 
 set(YCMD_DIR third_party/ycmd/cpp/ycm)
-include_directories(${YCMD_DIR})
 
 set(YCMD_SOURCES
+"${YCMD_DIR}/Candidate.cpp"
 "${YCMD_DIR}/IdentifierCompleter.cpp"
 "${YCMD_DIR}/IdentifierDatabase.cpp"
-"${YCMD_DIR}/CandidateRepository.cpp"
-"${YCMD_DIR}/CharacterRepository.cpp"
 "${YCMD_DIR}/CodePoint.cpp"
-"${YCMD_DIR}/CodePointRepository.cpp"
+"${YCMD_DIR}/Repository.cpp"
 "${YCMD_DIR}/Word.cpp"
-"${YCMD_DIR}/Candidate.cpp"
 "${YCMD_DIR}/Result.cpp"
 "${YCMD_DIR}/Character.cpp"
-"${YCMD_DIR}/Utils.cpp"
 "${YCMD_DIR}/IdentifierUtils.cpp"
+"${YCMD_DIR}/Utils.cpp"
 )
 
-add_executable(ycm "src/main.cpp" ${YCMD_SOURCES})
-target_link_libraries(ycm asio::asio msgpack::msgpack)
+
+add_library( ycmd_static STATIC ${YCMD_SOURCES} )
+target_include_directories( ycmd_static PRIVATE ${YCMD_DIR})
+target_link_libraries(ycmd_static absl::flat_hash_map absl::flat_hash_set)
+target_compile_definitions( ycmd_static PUBLIC YCM_ABSEIL_SUPPORTED )
+target_compile_definitions( ycmd_static PUBLIC YCM_EXPORT= )
+
+add_executable(ycm "src/main.cpp")
+target_include_directories( ycm PRIVATE ${YCMD_DIR})
+target_link_libraries(ycm ycmd_static asio::asio msgpack::msgpack)
+# XXX(AC): we have to integrate with ycmd build system
