@@ -242,13 +242,7 @@ local function complete_p()
 
   -- if we were called while the popup is visible because we've selected a
   -- candidate do not do the usual completion work.
-  -- XXX(andrea): when https://github.com/neovim/neovim/pull/12076 is merged
-  -- we should just do:
-  --   if not vim.tbl_isempty(vim.v.completed_item) then
-  --     return
-  --   end
-  local selected = vim.v.completed_item
-  if selected.word ~= nil then
+  if not vim.tbl_isempty(vim.v.completed_item) then
     return
   end
 
